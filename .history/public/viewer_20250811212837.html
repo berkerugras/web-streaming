@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Viewer — Watch Desktop</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Viewer</h1>
+  <div id="info">Connecting...</div>
+  <video id="remoteVideo" autoplay playsinline controls></video>
+  
+  <button id="turnOnMic">Turn on your Mic</button>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="viewer.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Broadcaster — Share Desktop</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Broadcaster</h1>
+  <button id="startBtn">Start Sharing Desktop</button>
+  <button id="stopBtn" disabled>Stop Sharing</button>
+  <button id="recordBtn">Start Recording (optional)</button>
+  <video id="localVideo" autoplay playsinline muted></video>
+  <div id="status">Status: idle</div>
+  
+  <button id="turnOnMic">S</button>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="broadcaster.js"></script>
+</body>
+</html>
