@@ -7,10 +7,11 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Password for broadcaster
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));  
+
 const BROADCASTER_PASSWORD = 'mySecret123';
 
-// Store active rooms { roomName: broadcasterSocketId }
 let rooms = {};
 
 // Redirect root to viewer.html
@@ -18,25 +19,17 @@ app.get('/', (req, res) => {
   res.redirect('/viewer.html');
 });
 
-// Protect broadcaster.html with password
-app.get('/broadcaster.html', (req, res) => {
-  const password = req.query.password;
+app.post('/broadcaster-login', (req, res) => {
+  const password = req.body.password;
   if (password === BROADCASTER_PASSWORD) {
     res.sendFile(path.join(__dirname, 'public', 'broadcaster.html'));
   } else {
-    res.status(401).send(`
-      <html>
-        <body style="font-family: sans-serif;">
-          <h2>Enter Broadcaster Password</h2>
-          <form method="GET" action="/broadcaster.html">
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Submit</button>
-          </form>
-          ${password ? '<p style="color:red;">Unauthorized: Wrong password</p>' : ''}
-        </body>
-      </html>
-    `);
+    res.status(401).sendFile(path.join(__dirname, 'public', 'authorization.html'));
   }
+});
+
+app.get('/broadcaster.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'authorization.html'));
 });
 
 app.use(express.static('public'));
@@ -47,7 +40,6 @@ server.listen(PORT, () => console.log(`Server started on http://localhost:${PORT
 io.on('connection', (socket) => {
   console.log('Socket connected:', socket.id);
 
-  // Broadcaster joins a room
   socket.on('broadcaster-join', ({ room }) => {
     console.log(`Broadcaster ${socket.id} joined room: ${room}`);
     rooms[room] = socket.id;
@@ -55,7 +47,6 @@ io.on('connection', (socket) => {
     io.emit('room-list', Object.keys(rooms));
   });
 
-  // Broadcaster leaves a room
   socket.on('broadcaster-leave', ({ room }) => {
     console.log(`Broadcaster left room: ${room}`);
     delete rooms[room];
@@ -65,11 +56,16 @@ io.on('connection', (socket) => {
   });
 
   // Viewer joins a room
-  socket.on('viewer-join', ({ room }) => {
-    console.log(`Viewer ${socket.id} joined room: ${room}`);
+  socket.on('viewer-join', ({ room, userName }) => {
+    console.log(`Viewer ${userName} (${socket.id}) joined room: ${room}`);
     socket.join(room);
+    
     if (rooms[room]) {
-      io.to(rooms[room]).emit('new-viewer', { viewerId: socket.id });
+      // Send both the socket ID AND the username to the broadcaster
+      io.to(rooms[room]).emit('new-viewer', { 
+        viewerId: socket.id, 
+        userName: userName || 'Anonymous' 
+      });
     } else {
       socket.emit('no-broadcaster');
     }

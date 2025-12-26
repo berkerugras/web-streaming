@@ -18,40 +18,26 @@ let micStream = null;
 
 let broadcasterId = null; // NEW: store broadcaster's socket ID
 
-
-
 function renderRooms(rooms) {
+  roomListDiv.innerHTML = '';
+  if (rooms.length === 0) {
+    roomListDiv.textContent = "No broadcasters online.";
+    return;
+  }
+  rooms.forEach(room => {
+    const btn = document.createElement('button');
+    btn.innerHTML = `<i class="fas fa-broadcast-tower"></i> Watch ${room}`;
+    btn.onclick = () => {
+      // NEW: Ask for a username
+      const userName = prompt("Enter your username:");
+      if (!userName) return;
 
- roomListDiv.innerHTML = '';
-
- if (rooms.length === 0) {
-
-  roomListDiv.textContent = "No broadcasters online.";
-
-  return;
-
- }
-
- rooms.forEach(room => {
-
-  const btn = document.createElement('button');
-
-  btn.textContent = `Watch ${room}`;
-
-  btn.onclick = () => {
-
-   socket.emit('viewer-join', { room });
-
-   info.textContent = `Connecting to ${room}...`;
-
-   micBtn.style.display = 'inline-block';
-
-  };
-
-  roomListDiv.appendChild(btn);
-
- });
-
+      socket.emit('viewer-join', { room, userName }); // Send userName here
+      info.textContent = `Connecting to ${room}...`;
+      micBtn.style.display = 'inline-block';
+    };
+    roomListDiv.appendChild(btn);
+  });
 }
 
 

@@ -24,7 +24,9 @@ const toggleMicBtn = document.getElementById('turnOnMic');
 
 const viewerAudio = document.getElementById('viewerAudio');
 
+const viewersMap = {}; // This stores { socketId: userName }
 
+const viewerListUI = document.getElementById('viewerList'); // Ensure this ID exists in HTML
 
 let roomName = null;
 
@@ -42,7 +44,15 @@ function setStatus(msg) {
 
 }
 
-
+function updateViewerUI() {
+  if (!viewerListUI) return;
+  viewerListUI.innerHTML = '';
+  Object.values(viewersMap).forEach(name => {
+    const li = document.createElement('li');
+    li.innerHTML = name + ' <i class="fa-solid fa-user"></i>';
+    viewerListUI.appendChild(li);
+  });
+}
 
 startBtn.onclick = async () => {
 
@@ -111,63 +121,6 @@ stopBtn.onclick = () => {
  toggleMicBtn.textContent = 'Turn On Mic';
 
 };
-
-
-
-  // recordBtn.onclick = () => {
-
-  // if (!localStream) {
-
-  //   alert('Start sharing first');
-
-  //   return;
-
-  // }
-
-  // if (!mediaRecorder) {
-
-  //   mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm; codecs=vp8' });
-
-  //   mediaRecorder.ondataavailable = e => { if (e.data.size) recordedChunks.push(e.data); };
-
-  //   mediaRecorder.onstop = () => {
-
-  //   const blob = new Blob(recordedChunks, { type: 'video/webm' });
-
-  //   const url = URL.createObjectURL(blob);
-
-  //   const a = document.createElement('a');
-
-  //   a.href = url;
-
-  //   a.download = 'recording.webm';
-
-  //   a.click();
-
-  //   recordedChunks = [];
-
-  //   mediaRecorder = null;
-
-  //   recordBtn.textContent = 'Start Recording (optional)';
-
-  //   };
-
-  //   mediaRecorder.start();
-
-  //   recordBtn.textContent = 'Stop Recording';
-
-  //   setStatus('Recording');
-
-  // } else {
-
-  //   mediaRecorder.stop();
-
-  //   setStatus(`Sharing screen in room: ${roomName}`);
-
-  // }
-
-  // };
-
 
 
 async function renegotiate(pc, viewerId) {
@@ -244,27 +197,25 @@ toggleMicBtn.onclick = () => micOn ? removeMicTracks() : addMicTracks();
 
 
 
-socket.on('new-viewer', async ({ viewerId }) => {
+// Update the new-viewer listener
+socket.on('new-viewer', async ({ viewerId, userName }) => {
+  if (!localStream) return;
 
- if (!localStream) return;
+  // Store the mapping
+  viewersMap[viewerId] = userName;
+  updateViewerUI();
 
- const pc = new RTCPeerConnection(config);
-
- pcs[viewerId] = pc;
-
- localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-
-
- pc.onicecandidate = e => { if (e.candidate) socket.emit('ice-candidate', { target: viewerId, candidate: e.candidate }); };
-
- const offer = await pc.createOffer();
-
- await pc.setLocalDescription(offer);
-
- socket.emit('offer', { target: viewerId, sdp: offer });
-
+  const pc = new RTCPeerConnection(config);
+  pcs[viewerId] = pc;
+  
+  // ... rest of your existing WebRTC logic ...
+  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+  pc.onicecandidate = e => { if (e.candidate) socket.emit('ice-candidate', { target: viewerId, candidate: e.candidate }); };
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  socket.emit('offer', { target: viewerId, sdp: offer });
 });
+
 
 
 
@@ -285,17 +236,16 @@ socket.on('ice-candidate', ({ from, candidate }) => {
 
 
 socket.on('peer-left', ({ id }) => {
-
- if (pcs[id]) {
-
-  pcs[id].close();
-
-  delete pcs[id];
-
- }
-
+  if (pcs[id]) {
+    pcs[id].close();
+    delete pcs[id];
+  }
+  // Remove from map and update UI
+  if (viewersMap[id]) {
+    delete viewersMap[id];
+    updateViewerUI();
+  }
 });
-
 
 
 
