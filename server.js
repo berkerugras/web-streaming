@@ -84,6 +84,10 @@ io.on('connection', (socket) => {
     io.to(target).emit('ice-candidate', { from: socket.id, candidate });
   });
 
+  socket.on('quality-adapt', ({ target, quality }) => {
+    io.to(target).emit('quality-adapt', { from: socket.id, quality });
+  });
+
   // Send initial room list
   socket.on('get-room-list', () => {
     socket.emit('room-list', Object.keys(rooms));

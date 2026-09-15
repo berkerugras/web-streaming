@@ -1,14 +1,15 @@
  const socket = io();
 
 const remoteVideo = document.getElementById('remoteVideo');
+const broadcasterCam = document.getElementById('broadcasterCam');
 
 const info = document.getElementById('info');
 
 const roomListDiv = document.getElementById('roomList');
 
 const micBtn = document.getElementById('turnOnMic');
-
-
+const startCamBtn = document.getElementById('startCam');
+const localCamera = document.getElementById('localCamera');
 
 const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
@@ -16,7 +17,12 @@ let pc = null;
 
 let micStream = null;
 
+let camStream = null;
+
 let broadcasterId = null; // NEW: store broadcaster's socket ID
+
+let broadcasterScreenReceived = false;
+let broadcasterCamReceived = false;
 
 function renderRooms(rooms) {
   roomListDiv.innerHTML = '';
@@ -35,6 +41,7 @@ function renderRooms(rooms) {
       socket.emit('viewer-join', { room, userName }); // Send userName here
       info.textContent = `Connecting to ${room}...`;
       micBtn.style.display = 'inline-block';
+      startCamBtn.style.display = 'inline-block';
     };
     roomListDiv.appendChild(btn);
   });
@@ -105,7 +112,60 @@ async function startMic() {
 
 micBtn.onclick = startMic;
 
+async function toggleCam() {
+  try {
+    if (!pc) {
+      console.warn('No active connection to broadcaster.');
+      info.textContent = 'No broadcaster connection yet. Join a room first.';
+      return;
+    }
 
+    if (camStream) {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender) pc.removeTrack(sender);
+
+      camStream.getTracks().forEach(t => t.stop());
+      camStream = null;
+      localCamera.srcObject = null;
+      localCamera.style.display = 'none';
+      startCamBtn.textContent = 'Start Camera';
+      info.textContent = 'Camera stopped.';
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit('offer', { target: broadcasterId, sdp: offer });
+      return;
+    }
+
+    console.log('Requesting camera access');
+    camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+
+    localCamera.srcObject = camStream;
+    localCamera.style.display = 'block';
+    startCamBtn.textContent = 'Stop Camera';
+    info.textContent = 'Camera enabled. Connecting...';
+
+    camStream.getVideoTracks().forEach(track => {
+      console.log('Adding camera track to peer connection', track);
+      pc.addTrack(track, camStream);
+    });
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.emit('offer', { target: broadcasterId, sdp: offer });
+  } catch (err) {
+    console.error('Could not get camera:', err);
+    if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      info.textContent = 'Camera not found. Please attach a webcam and refresh.';
+    } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      info.textContent = 'Camera access denied. Allow camera permissions and try again.';
+    } else {
+      info.textContent = `Could not access camera: ${err.message}`;
+    }
+  }
+}
+
+startCamBtn.onclick = toggleCam;
 
 socket.on('no-broadcaster', () => {
 
@@ -131,6 +191,25 @@ socket.on('broadcaster-offline', () => {
 
  }
 
+ if (camStream) {
+
+  camStream.getTracks().forEach(t => t.stop());
+
+  camStream = null;
+
+  localCamera.srcObject = null;
+
+  localCamera.style.display = 'none';
+
+  startCamBtn.textContent = 'Start Camera';
+
+ }
+
+ broadcasterCam.srcObject = null;
+ broadcasterCam.style.display = 'none';
+ broadcasterScreenReceived = false;
+ broadcasterCamReceived = false;
+
 });
 
 
@@ -148,8 +227,35 @@ socket.on('offer', async ({ from, sdp }) => {
     pc = new RTCPeerConnection(config);
 
     pc.ontrack = (event) => {
-      remoteVideo.srcObject = event.streams[0];
-      console.log('Remote stream set in viewer video, track kinds:', event.streams[0].getTracks().map(t => t.kind));
+      if (event.track.kind === 'audio') {
+        if (!remoteVideo.srcObject) {
+          remoteVideo.srcObject = event.streams[0];
+        }
+        return;
+      }
+
+      if (event.track.kind === 'video') {
+        const stream = event.streams[0];
+
+        if (!broadcasterScreenReceived) {
+          remoteVideo.srcObject = stream;
+          remoteVideo.style.display = 'block';
+          broadcasterScreenReceived = true;
+          console.log('Receiver: broadcaster screen stream set');
+          return;
+        }
+
+        if (!broadcasterCamReceived) {
+          broadcasterCam.srcObject = stream;
+          broadcasterCam.style.display = 'block';
+          broadcasterCamReceived = true;
+          console.log('Receiver: broadcaster cam stream set');
+          return;
+        }
+
+        // Fallback: if we already have both, keep screen on remoteVideo
+        console.log('Receiver: extra video track received', event.track.label);
+      }
     };
 
     pc.onicecandidate = (event) => {

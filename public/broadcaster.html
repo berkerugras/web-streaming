@@ -157,11 +157,18 @@
       <button id="stopBtn" disabled><i class="fas fa-stop"></i> Stop Sharing</button>
       <button id="recordBtn"><i class="fas fa-circle"></i> Record</button>
       <button id="turnOnMic"><i class="fas fa-microphone"></i> Enable Mic</button>
+
     </div>
     
     <video id="localVideo" autoplay playsinline muted></video>
+    <video id="localCam" autoplay playsinline muted style="width: 200px; display:none; margin-top:10px; border: 2px solid #ddd; border-radius: 8px;"></video>
     <audio id="viewerAudio" autoplay></audio>
-    
+    <div id="viewerCams" style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 12px;"></div>
+    <div style="margin-bottom: 2rem;">
+      <button id="turnOnCam"><i class="fas fa-video"></i> Enable Cam</button>
+      <button id="turnOnViewerCam"><i class="fas fa-video"></i> Enable Viewer Cam</button>
+    </div>  
+
     <div id="viewerContainer">
       <strong><i class="fas fa-users"></i> Active Viewers</strong>
       <ul id="viewerList"></ul>

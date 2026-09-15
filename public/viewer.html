@@ -113,7 +113,12 @@
       <div id="info" style="color: black;">Select a broadcaster to watch:</div>
       <div id="roomList" style="color: black;">Loading rooms...</div>
       <video id="remoteVideo" autoplay playsinline controls></video>
-      <button id="turnOnMic" style="display:none;">Turn on your Mic</button>
+      <video id="broadcasterCam" autoplay playsinline muted style="width: 200px; height: 150px; margin-top: 12px; display:none; border: 2px solid #fff; border-radius: 8px; object-fit: cover;"></video>
+      <video id="localCamera" autoplay playsinline muted style="width: 200px; height: 150px; margin-top: 12px; display:none; border: 2px solid #fff; border-radius: 8px; object-fit: cover;"></video>
+      <div style="margin-top: 12px; display:flex; gap:8px;">
+        <button id="turnOnMic" style="display:none;">Turn on your Mic</button>
+        <button id="startCam" style="display:none;">Start Camera</button>
+      </div>
     </div>
   </div>
   <script src="/socket.io/socket.io.js"></script>
