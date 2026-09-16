@@ -1,4 +1,21 @@
- const socket = io();
+const socket = window.io ? io() : {
+  on: () => {},
+  emit: () => {},
+  disconnect: () => {},
+  connected: false
+};
+
+if (!window.io) {
+  const infoEl = document.getElementById('info');
+  const roomListDiv = document.getElementById('roomList');
+  if (infoEl) {
+    infoEl.textContent = 'Realtime connection is unavailable on GitHub Pages. Deploy the Node backend to a host like Render/Railway to enable live streaming.';
+  }
+  if (roomListDiv) {
+    roomListDiv.textContent = 'Static preview only';
+  }
+  console.warn('Socket.IO client is unavailable. This page is being served by GitHub Pages, which does not host the Node backend.');
+}
 
 const remoteVideo = document.getElementById('remoteVideo');
 const broadcasterCam = document.getElementById('broadcasterCam');

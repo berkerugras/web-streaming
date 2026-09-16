@@ -1,4 +1,17 @@
- const socket = io();
+const socket = window.io ? io() : {
+  on: () => {},
+  emit: () => {},
+  disconnect: () => {},
+  connected: false
+};
+
+if (!window.io) {
+  const statusEl = document.getElementById('status');
+  if (statusEl) {
+    statusEl.textContent = 'Static mode: backend required for live streaming';
+  }
+  console.warn('Socket.IO client is unavailable. This page is being served by GitHub Pages, which does not host the Node backend. Deploy the backend separately for real-time streaming.');
+}
 
 let localStream = null;
 
